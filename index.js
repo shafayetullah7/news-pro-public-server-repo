@@ -17,7 +17,7 @@ app.get('/',(req,res)=>{
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xhpmdyt.mongodb.net/?retryWrites=true&w=majority`;
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.swu9d.mongodb.net/?retryWrites=true&w=majority`;
-console.log(uri)
+// console.log(uri)
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -54,7 +54,7 @@ async function run() {
 
     app.post('/users', async (req, res) => {
         const user = req.body;
-        console.log(user);
+        // console.log(user);
         const query = { email: user.email }
         const existingUser = await userCollection.findOne(query);
   

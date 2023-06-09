@@ -10,6 +10,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
+
 const verifyJWT = (req,res,next)=>{
   // console.log('auth',req.headers.authorization);
   const authorization = req.headers.authorization;
@@ -63,7 +65,7 @@ async function run() {
 
 
     const verifyAdmin = async(req,res,next) => {
-      console.log('verify admin');
+      // console.log('verify admin');
       const email = req.decoded.data.email;
       const user = await userCollection.findOne({email:email});
       // console.log(user);
@@ -71,6 +73,7 @@ async function run() {
       next();
       
     }
+
 
     app.post('/jwt',(req,res)=>{
         const user = req.body;
@@ -83,10 +86,11 @@ async function run() {
 
     
     app.get('/users',verifyJWT,verifyAdmin,async(req,res)=>{
-      console.log('hello')
+      // console.log('hello')
       const users = await userCollection.find().toArray();
       res.send(users);
     })
+
 
     app.post('/users', async (req, res) => {
         const user = req.body;
@@ -102,6 +106,7 @@ async function run() {
         res.send(result);
     });
 
+
     app.get('/users/:email',verifyJWT, async(req,res)=>{
       const email = req.params.email;
       const decodedEmail = req.decoded.data.email;
@@ -112,6 +117,23 @@ async function run() {
         return res.status(401).send({error:true,message:'unauthorized access:emails do not match'});
       }
       const result = await userCollection.findOne({email:email})
+      res.send(result);
+    });
+
+
+    app.put('/type',verifyJWT,verifyAdmin,async(req,res)=>{
+      const { type, email } = req.body;
+      
+      const result = userCollection.findOneAndUpdate(
+        { email: email },
+        { $set: { type: type } },
+        { upsert: true },
+        (err, result) => {
+          if (err) {
+            return res.status(500).json({ error: 'Failed to update the document.' });
+          }
+        }
+      )
       res.send(result);
     })
 

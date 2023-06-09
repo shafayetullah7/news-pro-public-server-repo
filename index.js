@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 const verifyJWT = (req,res,next)=>{
-  console.log(req.headers.authorization);
+  // console.log('auth',req.headers.authorization);
   const authorization = req.headers.authorization;
   if(!authorization){
     return res.status(401).send({error:true,message:'unauthorized access:no token'});
@@ -22,16 +22,20 @@ const verifyJWT = (req,res,next)=>{
     if(err){
       return res.status(401).send({error:true,message:'unauthorized access:invalid token'});
     }
-    console.log('decoded : ',decoded);
+    // console.log('decoded : ',decoded);
     req.decoded = decoded;
-    console.log('req.decoded: ',req.decoded);
+    // console.log('req.decoded: ',req.decoded);
     next();
   })
 }
 
+
+
 app.get('/',(req,res)=>{
     res.send('hello from news pro');
 })
+
+
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xhpmdyt.mongodb.net/?retryWrites=true&w=majority`;
@@ -56,6 +60,18 @@ async function run() {
 
     const userCollection = client.db('newsPro').collection('users');
 
+
+
+    const verifyAdmin = async(req,res,next) => {
+      console.log('verify admin');
+      const email = req.decoded.data.email;
+      const user = await userCollection.findOne({email:email});
+      // console.log(user);
+      if(user.type!=='admin')res.status(401).send({error:true,message:'Unauthorized access:not admin'})
+      next();
+      
+    }
+
     app.post('/jwt',(req,res)=>{
         const user = req.body;
         const token = jwt.sign({
@@ -65,24 +81,11 @@ async function run() {
         res.send({token});
     })
 
-    // app.post('/users',async(req,res)=>{
-    //     const user = req.body;
-    //     console.log(user);
-    //     const result = await userCollection.insertOne(user);
-    //     res.send(result);
-    //     // res.send({});
-    // })
-    app.get('/users/:email',verifyJWT, async(req,res)=>{
-      const email = req.params.email;
-      const decodedEmail = req.decoded.data.email;
-      console.log('email: ',email);
-      console.log('dec email: ',decodedEmail);
-      
-      if(email!==decodedEmail){
-        return res.status(401).send({error:true,message:'unauthorized access:emails do not match'});
-      }
-      const result = await userCollection.findOne({email:email})
-      res.send(result);
+    
+    app.get('/users',verifyJWT,verifyAdmin,async(req,res)=>{
+      console.log('hello')
+      const users = await userCollection.find().toArray();
+      res.send(users);
     })
 
     app.post('/users', async (req, res) => {
@@ -98,6 +101,19 @@ async function run() {
         const result = await userCollection.insertOne(user);
         res.send(result);
     });
+
+    app.get('/users/:email',verifyJWT, async(req,res)=>{
+      const email = req.params.email;
+      const decodedEmail = req.decoded.data.email;
+      // console.log('email: ',email);
+      // console.log('dec email: ',decodedEmail);
+      
+      if(email!==decodedEmail){
+        return res.status(401).send({error:true,message:'unauthorized access:emails do not match'});
+      }
+      const result = await userCollection.findOne({email:email})
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

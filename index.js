@@ -157,13 +157,33 @@ async function run() {
       const id = req.params.id;
       // console.log(id);
       const result = await classesColloction.findOne({_id:new ObjectId(id)});
-      console.log('class',result);
-      // res.send(result);
+      // console.log('class',result);
+      res.send(result);
     })
 
-    app.put('/classes/:id/feedback',verifyJWT,verifyAdmin,async(req,res)=>{
+    app.put('/classes/:id/deny',verifyJWT,verifyAdmin,async(req,res)=>{
       const id = req.params.id;
-      
+      const { status, feedback } = req.body;
+
+      const result = await classesColloction.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: { status:status, feedback:feedback } },
+        { returnOriginal: false }
+      );
+
+      res.send(result);
+    })
+
+    app.put('/classes/:id/approve',verifyJWT,verifyAdmin,async(req,res)=>{
+      const id = req.params.id;
+      const { status } = req.body;
+
+      const result = await classesColloction.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: { status } },
+        { returnOriginal: false }
+      );
+      res.send(result);
     })
 
     // Send a ping to confirm a successful connection

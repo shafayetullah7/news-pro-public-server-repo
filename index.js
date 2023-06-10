@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 const port = process.env.PORT || 5000;
@@ -24,7 +25,7 @@ const verifyJWT = (req,res,next)=>{
     if(err){
       return res.status(401).send({error:true,message:'unauthorized access:invalid token'});
     }
-    // console.log('decoded : ',decoded);
+    console.log('decoded : ',decoded);
     req.decoded = decoded;
     // console.log('req.decoded: ',req.decoded);
     next();
@@ -39,7 +40,7 @@ app.get('/',(req,res)=>{
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xhpmdyt.mongodb.net/?retryWrites=true&w=majority`;
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.swu9d.mongodb.net/?retryWrites=true&w=majority`;
 // console.log(uri)
@@ -61,6 +62,7 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db('newsPro').collection('users');
+    const classesColloction = client.db('newsPro').collection('classes');
 
 
 
@@ -81,7 +83,7 @@ async function run() {
         const token = jwt.sign({
             data: user
           }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        console.log(token);
+        // console.log(token);
         res.send({token});
     })
 
@@ -136,6 +138,32 @@ async function run() {
         }
       )
       res.send(result);
+    });
+
+
+    app.get('/classes',verifyJWT,verifyAdmin,async(req,res)=>{
+      const result = await classesColloction.find().toArray();
+      res.send(result);
+    })
+
+    app.post('/classes',verifyJWT,async(req,res)=>{
+      const _class = req.body;
+      // console.log(_class);
+      const result = classesColloction.insertOne(_class);
+      res.send(result);
+    });
+
+    app.get('/classes/:id',verifyJWT,async(req,res)=>{
+      const id = req.params.id;
+      // console.log(id);
+      const result = await classesColloction.findOne({_id:new ObjectId(id)});
+      console.log('class',result);
+      // res.send(result);
+    })
+
+    app.put('/classes/:id/feedback',verifyJWT,verifyAdmin,async(req,res)=>{
+      const id = req.params.id;
+      
     })
 
     // Send a ping to confirm a successful connection

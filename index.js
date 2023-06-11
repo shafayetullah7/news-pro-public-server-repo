@@ -153,6 +153,11 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/classes/approved',async(req,res)=>{
+      const result = await classesColloction.find({status:'approved'}).toArray();
+      res.send(result);
+    })
+
     app.get('/classes/:id',verifyJWT,async(req,res)=>{
       const id = req.params.id;
       // console.log(id);
@@ -223,7 +228,7 @@ async function run() {
           }
         }
       ]).toArray();
-      
+
       res.send(result);
     })
 

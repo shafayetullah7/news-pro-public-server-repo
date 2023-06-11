@@ -25,7 +25,7 @@ const verifyJWT = (req,res,next)=>{
     if(err){
       return res.status(401).send({error:true,message:'unauthorized access:invalid token'});
     }
-    console.log('decoded : ',decoded);
+    // console.log('decoded : ',decoded);
     req.decoded = decoded;
     // console.log('req.decoded: ',req.decoded);
     next();
@@ -83,6 +83,7 @@ async function run() {
       const user = await userCollection.findOne({email:email});
       // console.log(user);
       if(user.type==='admin' || user.type==='instructor')res.status(401).send({error:true,message:'Unauthorized access:not admin'})
+      // console.log(req.decoded)
       next();
       
     }
@@ -263,8 +264,12 @@ async function run() {
     })
 
     app.get('/wishlist',verifyJWT,verifyStudent,async(req,res)=>{
-      const {userEmail,classId} = req.body;
-      const result = await enrollmentsCollection.find({userEmail,classId,status:'wished'})
+      const userEmail = req.decoded.data.email;
+      // console.log(req.decoded.data);
+      // console.log(userEmail);
+      const result = await enrollmentsCollection.find({userEmail,enrollStatus:'wished'}).toArray();
+      // console.log(result);
+      res.send(result);
     })
 
     // app.post('/enrollments',verifyJWT,verifyStudent,async(req,res)=>{

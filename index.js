@@ -158,6 +158,11 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/instructors',async(req,res)=>{
+      const result = await userCollection.find({type:'instructor'}).toArray();
+      res.send(result);
+    })
+
     app.get('/classes/:id',verifyJWT,async(req,res)=>{
       const id = req.params.id;
       // console.log(id);

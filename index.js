@@ -25,7 +25,7 @@ const verifyJWT = (req,res,next)=>{
     if(err){
       return res.status(401).send({error:true,message:'unauthorized access:invalid token'});
     }
-    console.log('decoded : ',decoded);
+    // console.log('decoded : ',decoded);
     req.decoded = decoded;
     // console.log('req.decoded: ',req.decoded);
     next();
@@ -59,7 +59,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+     client.connect();
 
     const userCollection = client.db('newsPro').collection('users');
     const classesColloction = client.db('newsPro').collection('classes');
@@ -185,6 +185,51 @@ async function run() {
       );
       res.send(result);
     })
+
+
+    app.get('/top-instructors',async(req,res)=>{
+      const result = await classesColloction.aggregate([
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'instructorEmail',
+            foreignField: 'email',
+            as: 'instructorDetails'
+          }
+        },
+        {
+          $unwind: '$instructorDetails'
+        },
+        {
+          $group: {
+            _id: '$instructorEmail',
+            totalStudents: { $sum: { $ifNull: ['$enroll', 0] } },
+            instructor: { $first: '$instructorDetails' }
+          }
+        },
+        {
+          $sort: { totalStudents: -1 }
+        },
+        {
+          $limit: 6
+        },
+        {
+          $project: {
+            _id: 0,
+            name: '$instructor.name',
+            email: '$instructor.email',
+            photoUrl: '$instructor.photoUrl',
+            totalStudents: 1
+          }
+        }
+      ]).toArray();
+      
+      res.send(result);
+    })
+
+
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

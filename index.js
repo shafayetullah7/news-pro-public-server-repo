@@ -25,7 +25,7 @@ const verifyJWT = (req,res,next)=>{
     if(err){
       return res.status(401).send({error:true,message:'unauthorized access:invalid token'});
     }
-    // console.log('decoded : ',decoded);
+    console.log('decoded : ',decoded);
     req.decoded = decoded;
     // console.log('req.decoded: ',req.decoded);
     next();
@@ -63,6 +63,7 @@ async function run() {
 
     const userCollection = client.db('newsPro').collection('users');
     const classesColloction = client.db('newsPro').collection('classes');
+    const enrollmentsCollection = client.db('newsPro').collection('enrollments');
 
 
 
@@ -72,6 +73,16 @@ async function run() {
       const user = await userCollection.findOne({email:email});
       // console.log(user);
       if(user.type!=='admin')res.status(401).send({error:true,message:'Unauthorized access:not admin'})
+      next();
+      
+    }
+
+    const verifyStudent = async(req,res,next) => {
+      // console.log('verify admin');
+      const email = req.decoded.data.email;
+      const user = await userCollection.findOne({email:email});
+      // console.log(user);
+      if(user.type==='admin' || user.type==='instructor')res.status(401).send({error:true,message:'Unauthorized access:not admin'})
       next();
       
     }
@@ -236,6 +247,37 @@ async function run() {
 
       res.send(result);
     })
+
+    app.post('/enrollments',verifyJWT,verifyStudent,async(req,res)=>{
+      let enrollment = req.body
+      const {classId,userEmail} = enrollment;
+      // console.log(enrollment);
+      const present = await enrollmentsCollection.findOne({classId,userEmail});
+      // console.log('present',present);
+
+      if(present)return res.send({exist:true,message:'already wished'});
+
+      const result = await enrollmentsCollection.insertOne(enrollment);
+      res.send(result);
+      // res.send({});
+    })
+
+    app.get('/wishlist',verifyJWT,verifyStudent,async(req,res)=>{
+      const {userEmail,classId} = req.body;
+      const result = await enrollmentsCollection.find({userEmail,classId,status:'wished'})
+    })
+
+    // app.post('/enrollments',verifyJWT,verifyStudent,async(req,res)=>{
+    //   let enrollment = req.body
+    //   const {classId} = enrollment;
+    //   console.log(enrollment);
+    //   const present = await enrollments.findOne({classId});
+    //   console.log('present',present);
+    //   // if(present)
+    //   // const result = await enrollments.insertOne(enrollment);
+    //   // res.send(result);
+    //   res.send({});
+    // })
 
 
 

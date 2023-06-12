@@ -391,6 +391,89 @@ async function run() {
         res.status(500).json({ message: 'Error retrieving enrolled classes' });
       }
     });
+
+    app.get('/payment-history', verifyJWT, verifyStudent, async (req, res) => {
+      try {
+        const enrollments = await enrollmentsCollection.find({
+          userEmail: req.decoded.data.email,
+          enrollStatus: "enrolled"
+        }).sort({ paymentDate: -1 }).toArray();
+    
+        res.json(enrollments);
+      } catch (error) {
+        console.error('Error retrieving payment history:', error);
+        res.status(500).json({ message: 'Error retrieving payment history' });
+      }
+    });
+
+
+    app.get('/unique-classes', async (req, res) => {
+      const uniqueClasses = await enrollmentsCollection.aggregate([
+        {
+          $group: {
+            _id: {
+              classId: "$classId",
+              className: "$className",
+              classImage: "$classImage"
+            }
+          }
+        }
+      ]).toArray();
+  
+      res.send(uniqueClasses);
+    });
+
+
+    app.get('/top-classes', async (req, res) => {
+      try {
+        const topClasses = await enrollmentsCollection.aggregate([
+          {
+            $match: {
+              enrollStatus: "enrolled"
+            }
+          },
+          {
+            $group: {
+              _id: {
+                classId: "$classId",
+                className: "$className",
+                classImage: "$classImage"
+              },
+              count: { $sum: 1 }
+            }
+          },
+          {
+            $sort: { count: -1 }
+          },
+          {
+            $limit: 6
+          },
+          {
+            $project: {
+              _id: 0,
+              classId: "$_id.classId",
+              className: "$_id.className",
+              classImage: "$_id.classImage",
+              count: 1
+            }
+          }
+        ]).toArray();
+    
+        res.json(topClasses);
+      } catch (error) {
+        console.error('Error retrieving top classes:', error);
+        res.status(500).json({ message: 'Error retrieving top classes' });
+      }
+    });
+    
+    
+    
+    app.get('/instructors', async (req, res) => {
+      const instructors = await userCollection.find({ type: 'instructor' }).toArray();
+      res.send(instructors);
+    });
+    
+    
     
 
 

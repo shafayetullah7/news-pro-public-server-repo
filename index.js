@@ -63,7 +63,7 @@ async function run() {
      client.connect();
 
     const userCollection = client.db('newsPro').collection('users');
-    const classesColloction = client.db('newsPro').collection('classes');
+    const classesCollection = client.db('newsPro').collection('classes');
     const enrollmentsCollection = client.db('newsPro').collection('enrollments');
 
 
@@ -155,19 +155,19 @@ async function run() {
 
 
     app.get('/classes',verifyJWT,verifyAdmin,async(req,res)=>{
-      const result = await classesColloction.find().toArray();
+      const result = await classesCollection.find().toArray();
       res.send(result);
     })
 
     app.post('/classes',verifyJWT,async(req,res)=>{
       const _class = req.body;
       // console.log(_class);
-      const result = classesColloction.insertOne(_class);
+      const result = classesCollection.insertOne(_class);
       res.send(result);
     });
 
     app.get('/classes/approved',async(req,res)=>{
-      const result = await classesColloction.find({status:'approved'}).toArray();
+      const result = await classesCollection.find({status:'approved'}).toArray();
       res.send(result);
     })
 
@@ -179,7 +179,7 @@ async function run() {
     app.get('/classes/:id',verifyJWT,async(req,res)=>{
       const id = req.params.id;
       // console.log(id);
-      const result = await classesColloction.findOne({_id:new ObjectId(id)});
+      const result = await classesCollection.findOne({_id:new ObjectId(id)});
       // console.log('class',result);
       res.send(result);
     })
@@ -188,7 +188,7 @@ async function run() {
       const id = req.params.id;
       const { status, feedback } = req.body;
 
-      const result = await classesColloction.findOneAndUpdate(
+      const result = await classesCollection.findOneAndUpdate(
         { _id: new ObjectId(id) },
         { $set: { status:status, feedback:feedback } },
         { returnOriginal: false }
@@ -201,7 +201,7 @@ async function run() {
       const id = req.params.id;
       const { status } = req.body;
 
-      const result = await classesColloction.findOneAndUpdate(
+      const result = await classesCollection.findOneAndUpdate(
         { _id: new ObjectId(id) },
         { $set: { status } },
         { returnOriginal: false }
@@ -213,7 +213,7 @@ async function run() {
 
 
     app.get('/top-instructors',async(req,res)=>{
-      const result = await classesColloction.aggregate([
+      const result = await classesCollection.aggregate([
         {
           $lookup: {
             from: 'users',
@@ -330,6 +330,66 @@ async function run() {
       res.send({
         clientSecret: paymentIntent.client_secret,
       });
+    });
+
+
+    app.put('/enrollments/:id', verifyJWT, async (req, res) => {
+      const enrollmentId = req.params.id;
+      // const { enrollStatus, transactionId } = req.body;
+      // console.log(enrollStatus,transactionId,enrollmentId);
+      const updatedData = req.body;
+      console.log(updatedData);
+    
+      try {
+        const enrollment = await enrollmentsCollection.findOne({ _id: new ObjectId(enrollmentId) });
+        
+        if (!enrollment) {
+          console.log('Enrollment not found');
+          return res.status(404).json({ message: 'Enrollment not found' });
+        }
+        
+        const updateResult = await enrollmentsCollection.updateOne(
+          { _id: new ObjectId(enrollmentId) },
+          { $set: updatedData }
+        );
+    
+        if (updateResult.modifiedCount === 1) {
+          // Update the class document to reduce available seats by 1
+          const classUpdateResult = await classesCollection.updateOne(
+            { _id: new ObjectId(enrollment.classId) },
+            { $inc: { availableSeats: -1 } }
+          );
+          
+          if (classUpdateResult.modifiedCount === 1) {
+            // Additional tasks after successful update and class update
+            console.log('Enrollment updated successfully');
+            res.json({ message: 'Enrollment updated successfully' });
+          } else {
+            console.log('Class not found');
+            res.status(404).json({ message: 'Class not found' });
+          }
+        } else {
+          console.log('Enrollment not found');
+          res.status(404).json({ message: 'Enrollment not found' });
+        }
+      } catch (error) {
+        console.error('Error updating enrollment:', error);
+        res.status(500).json({ message: 'Error updating enrollment' });
+      }
+      // res.send({});
+    });
+    
+
+    app.get('/enrolled-classes', verifyJWT, async (req, res) => {
+      const userEmail = req.decoded.data.email;
+    
+      try {
+        const enrolledClasses = await enrollmentsCollection.find({ userEmail, enrollStatus: 'enrolled' }).toArray();
+        res.json(enrolledClasses);
+      } catch (error) {
+        console.error('Error retrieving enrolled classes:', error);
+        res.status(500).json({ message: 'Error retrieving enrolled classes' });
+      }
     });
     
 

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
@@ -25,7 +26,7 @@ const verifyJWT = (req,res,next)=>{
     if(err){
       return res.status(401).send({error:true,message:'unauthorized access:invalid token'});
     }
-    // console.log('decoded : ',decoded);
+    console.log('decoded : ',decoded);
     req.decoded = decoded;
     // console.log('req.decoded: ',req.decoded);
     next();
@@ -209,6 +210,8 @@ async function run() {
     })
 
 
+
+
     app.get('/top-instructors',async(req,res)=>{
       const result = await classesColloction.aggregate([
         {
@@ -272,6 +275,30 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/enrollments/:id',verifyJWT,verifyStudent,async (req,res)=>{
+      const id = req.params.id;
+      console.log(id);
+      const result = await enrollmentsCollection.findOne({_id:new ObjectId(id)});
+      res.send(result);
+    })
+    app.delete('/enrollments/:id', verifyJWT, verifyStudent, async (req, res) => {
+      const id = req.params.id;
+      // console.log(new ObjectId(id));
+      
+      const result = await enrollmentsCollection.findOneAndDelete({ _id: new ObjectId(id) });
+
+      res.send(result);
+      // res.send({});
+    });
+
+    // app.get('/enrollments/:id',async(req,res)=>{
+    //   const id = req.params.id;
+    //   console.log(new ObjectId(id));
+    //   const result = await enrollmentsCollection.findOne({_id:new ObjectId(id)});
+    //   res.send(result);
+    // })
+    
+
     // app.post('/enrollments',verifyJWT,verifyStudent,async(req,res)=>{
     //   let enrollment = req.body
     //   const {classId} = enrollment;
@@ -284,7 +311,27 @@ async function run() {
     //   res.send({});
     // })
 
+  
+    app.post("/create-payment-intent", async (req, res) => {
+      let { price } = req.body;
+      price = parseFloat(price.toFixed(2));
+      const amount = Math.ceil(price*100);
+      console.log(req.body);
+      console.log('price : ',price);
+      console.log('amount : ',amount);
 
+    
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ['card'],
+      });
+    
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+    
 
 
 

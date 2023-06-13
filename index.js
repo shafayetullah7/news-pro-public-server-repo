@@ -90,6 +90,17 @@ async function run() {
       
     }
 
+    const verifyInstructor = async(req,res,next) => {
+      // console.log('verify admin');
+      const email = req.decoded.data.email;
+      const user = await userCollection.findOne({email:email});
+      // console.log('instructor:',user);
+      if(user.type!=='instructor')res.status(401).send({error:true,message:'Unauthorized access:not admin'})
+      // console.log(req.decoded)
+      next();
+      
+    }
+
 
     app.post('/jwt',(req,res)=>{
         const user = req.body;
@@ -483,10 +494,31 @@ async function run() {
       const instructors = await userCollection.find({ type: 'instructor' }).toArray();
       res.send(instructors);
     });
+
+    
+
+    app.get('/instructor-all-classes-enroll',verifyJWT,verifyInstructor, async (req, res) => {
+      const instructorEmail = req.decoded.data.email;
+      console.log(instructorEmail)
+      let allClasses = await classesCollection.find({ instructorEmail }).toArray();
+    
+      allClasses = await Promise.all(allClasses.map(async (cls) => {
+        if (allClasses && cls.status === 'approved') {
+          const enrolls = await enrollmentsCollection.countDocuments({ classId: cls._id.toString(), enrollStatus: 'enrolled' });
+          cls.totalEnrolls = enrolls;
+        }
+        return cls;
+      }));
+      console.log(allClasses);
+      res.send(allClasses);
+    });
+
+    
+    
     
     app.get('/instructor-classes/:email', async (req, res) => {
       const { email } = req.params;
-    
+      // if(req.decoded.data.email!==email)res.status(401).send({error:true,message:'unauthorized access'});
       const instructorData = await userCollection.aggregate([
         {
           $match: { email: email, type: 'instructor' }

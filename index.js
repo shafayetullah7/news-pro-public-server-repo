@@ -65,6 +65,7 @@ async function run() {
     const userCollection = client.db('newsPro').collection('users');
     const classesCollection = client.db('newsPro').collection('classes');
     const enrollmentsCollection = client.db('newsPro').collection('enrollments');
+    const testimonialCollection = client.db('newsPro').collection('testimonials');
 
 
 
@@ -135,6 +136,16 @@ async function run() {
       const result = await userCollection.findOne({email:email})
       res.send(result);
     });
+
+    app.post('/social-user',async (req,res)=>{{
+      const userData = req.body;
+      const user = await userCollection.findOne({email:userData.email});
+      if(user){
+        res.send({exist:true,message:'user exist in db'});
+      }
+      const result = await userCollection.insertOne(userData);
+      res.send(result);
+    }})
 
 
     app.put('/type',verifyJWT,verifyAdmin,async(req,res)=>{
@@ -472,6 +483,47 @@ async function run() {
       const instructors = await userCollection.find({ type: 'instructor' }).toArray();
       res.send(instructors);
     });
+    
+    app.get('/instructor-classes/:email', async (req, res) => {
+      const { email } = req.params;
+    
+      const instructorData = await userCollection.aggregate([
+        {
+          $match: { email: email, type: 'instructor' }
+        },
+        {
+          $lookup: {
+            from: 'classes',
+            localField: 'email',
+            foreignField: 'instructorEmail',
+            as: 'classes'
+          }
+        },
+        {
+          $unwind: '$classes'
+        },
+        {
+          $match: { 'classes.status': 'approved' }
+        },
+        {
+          $group: {
+            _id: '$_id',
+            name: { $first: '$name' },
+            email: { $first: '$email' },
+            photoUrl: { $first: '$photoUrl' },
+            phoneNumber: { $first: '$phoneNumber' },
+            gender: { $first: '$gender' },
+            address: { $first: '$address' },
+            type: { $first: '$type' },
+            classes: { $push: '$classes' }
+          }
+        }
+      ]).toArray();
+
+      res.send(instructorData);
+    });
+
+
     
     
     

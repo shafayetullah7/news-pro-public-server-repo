@@ -231,6 +231,18 @@ async function run() {
       res.send(result);
     })
 
+    app.put('/classes/:id/feedback',verifyJWT,verifyAdmin,async(req,res)=>{
+      const id = req.params.id;
+      const { feedback } = req.body;
+
+      const result = await classesCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: { feedback } },
+        { returnOriginal: false }
+      );
+      res.send(result);
+    })
+
 
 
 

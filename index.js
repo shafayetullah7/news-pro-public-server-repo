@@ -149,13 +149,19 @@ async function run() {
     });
 
     app.post('/social-user',async (req,res)=>{{
+      console.log('social in');
       const userData = req.body;
+      console.log(userData);
       const user = await userCollection.findOne({email:userData.email});
+      console.log(user);
       if(user){
         res.send({exist:true,message:'user exist in db'});
       }
-      const result = await userCollection.insertOne(userData);
-      res.send(result);
+      else{
+        console.log('google in');
+        const result = await userCollection.insertOne(userData);
+        res.send(result);
+      }
     }})
 
 
